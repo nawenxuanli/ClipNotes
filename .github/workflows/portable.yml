@@ -19,11 +19,11 @@ jobs:
           python-version: '3.11'
           cache: pip
       - if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libegl1 libgl1 libpulse0 libxkbcommon-x11-0 libxcb-cursor0 xvfb xauth
+        run: sudo apt-get update && sudo apt-get install -y libegl1 libgl1 libpulse0 libxkbcommon-x11-0 libxcb-cursor0 libpipewire-0.3-0t64
       - run: python -m pip install -r requirements.txt
       - run: python -m unittest -v test_clipnotes.py
       - if: runner.os == 'Linux'
-        run: xvfb-run -a python clipnotes.py --smoke-test
+        run: QT_QPA_PLATFORM=offscreen python clipnotes.py --smoke-test
       - if: runner.os == 'Windows'
         shell: pwsh
         run: |
