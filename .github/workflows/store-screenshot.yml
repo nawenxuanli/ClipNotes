@@ -1,0 +1,74 @@
+name: Capture ClipNotes Store screenshot
+on:
+  push:
+    paths: ['.github/workflows/store-screenshot.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  screenshot:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install PySide6==6.8.3 av
+      - name: Capture the running app with synthetic course data
+        shell: pwsh
+        env:
+          QT_QPA_PLATFORM: offscreen
+          QT_SCALE_FACTOR: '1'
+        run: |
+          @'
+          import tempfile
+          from pathlib import Path
+          import av
+          from PySide6.QtWidgets import QApplication
+          from clipnotes import ClipNotes
+          from clipnotes_data import Library
+
+          with tempfile.TemporaryDirectory() as scratch:
+              root = Path(scratch)
+              app = QApplication([])
+              library = Library(root / "courses.json")
+              videos = []
+              for index, (name, start, text) in enumerate([
+                  ("01 - Build a pivot table", 2.4, "Select the source range and insert a pivot table on a new worksheet."),
+                  ("02 - Refresh a report", 3.2, "Refresh the pivot table after changing the source data."),
+              ]):
+                  path = root / (name + ".mp4")
+                  with av.open(str(path), "w") as output:
+                      stream = output.add_stream("mpeg4", rate=10)
+                      stream.width, stream.height, stream.pix_fmt = 320, 180, "yuv420p"
+                      for _ in range(60):
+                          frame = av.VideoFrame(320, 180, "yuv420p")
+                          for plane in frame.planes:
+                              plane.update(bytes([128]) * plane.buffer_size)
+                          output.mux(stream.encode(frame))
+                      output.mux(stream.encode())
+                  videos.append(dict(id=str(index), path=str(path), error=None,
+                                     moments=[dict(start=start, text=text)]))
+              library.courses = [dict(id="spreadsheet", title="Spreadsheet Essentials",
+                                      folder=str(root), videos=videos, guide=[])]
+              window = ClipNotes(library, lambda path: [])
+              window.timer.stop()
+              window.tabs.setCurrentIndex(1)
+              window.query.setText("pivot table")
+              window.resize(1440, 900)
+              window.show()
+              app.processEvents()
+              image = window.grab()
+              assert image.width() >= 1440 and image.height() >= 900
+              assert window.results.count() == 2
+              assert image.save("ClipNotes-Course-Search.png")
+              window.player.setSource(window.player.source().fromLocalFile(""))
+              window.close()
+          '@ | Set-Content -Encoding utf8 store_capture.py
+          python store_capture.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ClipNotes-Store-screenshot
+          path: ClipNotes-Course-Search.png
+          if-no-files-found: error
