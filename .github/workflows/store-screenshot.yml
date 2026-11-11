@@ -28,7 +28,7 @@ jobs:
           from clipnotes import ClipNotes
           from clipnotes_data import Library
 
-          with tempfile.TemporaryDirectory() as scratch:
+          with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as scratch:
               root = Path(scratch)
               app = QApplication([])
               library = Library(root / "courses.json")
