@@ -17,13 +17,14 @@ jobs:
       - name: Capture the running app with synthetic course data
         shell: pwsh
         env:
-          QT_QPA_PLATFORM: offscreen
+          QT_QPA_PLATFORM: windows
           QT_SCALE_FACTOR: '1'
         run: |
           @'
           import tempfile
           from pathlib import Path
           import av
+          from PySide6.QtGui import QFont
           from PySide6.QtWidgets import QApplication
           from clipnotes import ClipNotes
           from clipnotes_data import Library
@@ -31,6 +32,7 @@ jobs:
           with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as scratch:
               root = Path(scratch)
               app = QApplication([])
+              app.setFont(QFont("Segoe UI", 11))
               library = Library(root / "courses.json")
               videos = []
               for index, (name, start, text) in enumerate([
