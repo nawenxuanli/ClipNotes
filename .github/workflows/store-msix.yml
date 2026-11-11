@@ -20,7 +20,6 @@ on:
         type: string
 permissions:
   contents: read
-  actions: read
 jobs:
   store-package:
     runs-on: windows-2022
@@ -29,21 +28,20 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - uses: actions/download-artifact@v4
-        with:
-          name: ClipNotes-Windows-x64-preview
-          github-token: ${{ github.token }}
-          run-id: '42871681289'
-          path: build/verified-preview
-      - name: Prepare verified Windows build
+      - name: Build and smoke-test the Windows executable
         shell: pwsh
         run: |
-          $executables = @(Get-ChildItem build/verified-preview -Filter ClipNotes.exe -Recurse)
-          if ($executables.Count -ne 1) { throw 'Expected exactly one ClipNotes executable.' }
-          New-Item -ItemType Directory dist/ClipNotes -Force | Out-Null
-          Copy-Item -Path (Join-Path $executables[0].Directory.FullName '*') -Destination dist/ClipNotes -Recurse
-          python -m pip install PySide6==6.8.3
+          python -m pip install -r requirements.txt pyinstaller==6.12.0
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python -m unittest -v test_clipnotes.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python -m PyInstaller --noconfirm --windowed --name ClipNotes --icon ClipNotes.ico --add-data 'ClipNotes.png:.' --collect-all faster_whisper --collect-all av --collect-all ctranslate2 --collect-all onnxruntime clipnotes.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          $exe = Get-Item dist/ClipNotes/ClipNotes.exe
+          $app = Start-Process $exe.FullName -ArgumentList '--smoke-test' -PassThru
+          if (!$app.WaitForExit(30000)) { $app.Kill(); throw 'ClipNotes startup timed out.' }
+          if ($app.ExitCode -ne 0) { throw "ClipNotes exited with code $($app.ExitCode)." }
+          if (!(Test-Path dist/ClipNotes/_internal/ClipNotes.png)) { throw 'The bundled window icon is missing.' }
       - name: Package and verify MSIX
         shell: pwsh
         env:
@@ -56,6 +54,10 @@ jobs:
           [xml]$manifest = Get-Content build/msix/AppxManifest.xml
           if ($manifest.Package.Identity.Name -cne $env:STORE_IDENTITY -or $manifest.Package.Identity.Publisher -cne $env:STORE_PUBLISHER) {
             throw 'The package manifest does not match the Partner Center identity.'
+          }
+          if ($manifest.Package.Identity.Version -ne '2.1.1.0') { throw 'Unexpected package version.' }
+          foreach ($logo in 'StoreLogo.png', 'Square44x44Logo.png', 'Square150x150Logo.png') {
+            if ((Get-FileHash $logo).Hash -ne (Get-FileHash "build/msix/Assets/$logo").Hash) { throw "Logo mismatch: $logo" }
           }
       - uses: actions/upload-artifact@v4
         with:
