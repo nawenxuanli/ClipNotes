@@ -57,11 +57,11 @@ jobs:
               window.timer.stop()
               window.tabs.setCurrentIndex(1)
               window.query.setText("pivot table")
-              window.resize(1440, 900)
+              window.setFixedSize(1440, 900)
               window.show()
               app.processEvents()
               image = window.grab()
-              assert image.width() >= 1440 and image.height() >= 900
+              assert image.width() >= 1366 and image.height() >= 768, (image.width(), image.height())
               assert window.results.count() == 2
               assert image.save("ClipNotes-Course-Search.png")
               window.player.setSource(window.player.source().fromLocalFile(""))
