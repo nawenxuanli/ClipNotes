@@ -6,6 +6,7 @@ from pathlib import Path
 import sys
 
 from PySide6.QtCore import QStandardPaths, QTimer, QUrl, Qt
+from PySide6.QtGui import QIcon
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtMultimediaWidgets import QVideoWidget
 from PySide6.QtWidgets import (
@@ -43,6 +44,7 @@ class ClipNotes(QMainWindow):
         self.path = None
         self.target = None
         self.setWindowTitle("ClipNotes")
+        self.setWindowIcon(QIcon(str(Path(__file__).with_name("ClipNotes.png"))))
         self.resize(1140, 720)
         self.setAcceptDrops(True)
         self.courses, self.videos = QComboBox(), QListWidget()

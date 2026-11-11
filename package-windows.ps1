@@ -3,7 +3,7 @@ param(
     [Parameter(Mandatory=$true)][string]$Publisher,
     [string]$DisplayName = "ClipNotes",
     [string]$PublisherDisplayName = "ClipNotes",
-    [string]$Version = "2.1.0.0"
+    [string]$Version = "2.1.1.0"
 )
 $ErrorActionPreference = 'Stop'
 if ($Version -notmatch '^\d+\.\d+\.\d+\.0$') { throw 'Use a four-part version ending in .0.' }
@@ -16,9 +16,10 @@ $stage = Join-Path $PWD "build\msix"
 if (Test-Path $stage) { Remove-Item -Recurse -Force $stage }
 New-Item -ItemType Directory "$stage\Assets" -Force | Out-Null
 Copy-Item "$inputDir\*" $stage -Recurse
-$env:QT_QPA_PLATFORM = 'offscreen'
-python -c "from PySide6.QtGui import QImage; from pathlib import Path; a=Path('build/msix/Assets'); sizes={'StoreLogo':50,'Square150x150Logo':150,'Square44x44Logo':44}; exec('for name, size in sizes.items():\n image=QImage(size,size,QImage.Format.Format_RGB32)\n image.fill(0x10483f)\n assert image.save(str(a/(name+chr(46)+chr(112)+chr(110)+chr(103))))')"
-if ($LASTEXITCODE) { throw 'Could not generate package logos.' }
+$assetDir = $PSScriptRoot
+foreach ($logo in 'StoreLogo.png', 'Square150x150Logo.png', 'Square44x44Logo.png') {
+    Copy-Item -LiteralPath (Join-Path $assetDir $logo) -Destination "$stage\Assets"
+}
 $Identity = [Security.SecurityElement]::Escape($Identity)
 $Publisher = [Security.SecurityElement]::Escape($Publisher)
 $DisplayName = [Security.SecurityElement]::Escape($DisplayName)
