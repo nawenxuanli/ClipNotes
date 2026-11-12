@@ -1,4 +1,6 @@
-# ClipNotes 2.1
+# ClipNotes 2.1.1
+
+[Download ClipNotes 2.1.1 for macOS](./ClipNotes-2.1.1-macOS.zip)
 
 ClipNotes is a desktop workspace for recorded courses. This build runs on Apple silicon Macs with macOS 26 or later. Source is included.
 
